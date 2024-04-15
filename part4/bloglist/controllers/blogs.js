@@ -1,85 +1,63 @@
-const blogRouter = require('express').Router()
-const logger = require('../utils/logger')
-const jwt = require('jsonwebtoken')
-const Blog = require('../models/blogList')
-const User = require('../models/user')
+const jwt = require('jsonwebtoken');
+const router = require('express').Router();
+const Blog = require('../models/blog');
+const User = require('../models/user');
+const userExtractor = require('../utils/middleware').userExtractor;
 
-blogRouter.get('/', async (request, response) => {
-    const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
-    response.json(blogs.map(blog => blog.toJSON()))
-})
+router.get('/', async (request, response) => {
+  const blogs = await Blog.find({})
+    .populate('user', { username: 1, name: 1 });
 
-blogRouter.post('/', async (request, response, next) => {
-    const body = request.body
-    const token = request.token
-    const decodedToken = jwt.verify(token, process.env.SECRET)
-    const user = await User.findById(decodedToken.id)
+  response.json(blogs);
+});
 
-    const blog = new Blog({
-        title: body.title,
-        author: body.author,
-        url: body.url,
-        likes: body.likes || 0,
-        comments: body.comments || [],
-        user: user._id
-    })
+router.post('/', userExtractor, async (request, response) => {
+  const blog = new Blog(request.body);
+  const user = request.user;
 
-    try {
-        const savedBlog = await blog.save()
-        logger.info(`added ${blog.title} to the blog list`)
-        user.blogs = user.blogs.concat(savedBlog._id)
-        await user.save()
-        logger.info(`blog linked to user ${user.username}`)
-        response.json(savedBlog.toJSON())
-    } catch (exception) {
-        next(exception)
-    }
-})
+  if (!user) {
+    return response.status(403).json({ error: 'user missing' });
+  }
 
-blogRouter.delete('/:id', async (request, response, next) => {
-    const token = request.token
-    const decodedToken = jwt.verify(token, process.env.SECRET)
-    const user = await User.findById(decodedToken.id)
-    const blogToDelete = await Blog.findById(request.params.id)
+  if (!blog.title || !blog.url) {
+    return response.status(400).json({ error: 'title or url missing' });
+  }
 
-    if (blogToDelete.user._id.toString() === user._id.toString()) {
-        try {
-            await Blog.findByIdAndRemove(request.params.id)
-            response.status(204).end()
-        } catch (exception) {
-            next(exception)
-        }
-    } else {
-        return response.status(401).json({ error: `Unauthorized` })
-    }
-})
+  blog.likes = blog.likes || 0;
+  blog.user = user;
+  user.blogs.push(blog._id);
 
-blogRouter.put('/:id', async (request, response, next) => {
-    const body = request.body
-    const token = request.token
-    const decodedToken = jwt.verify(token, process.env.SECRET)
-    const user = await User.findById(decodedToken.id)
-    const blogToUpdate = await Blog.findById(request.params.id)
+  await Promise.all([user.save(), blog.save()]);
 
-    if (blogToUpdate.user._id.toString() === user._id.toString()) {
-        const blog = {
-            title: body.title,
-            author: body.author,
-            url: body.url,
-            likes: body.likes || 0,
-            comments: body.comments || [],
-        }
+  response.status(201).json(blog);
+});
 
-        try {
-            const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, { new: true })
-            logger.info(`blog ${blog.title} successfully updated`)
-            response.json(updatedBlog.toJSON())
-        } catch (exception) {
-            next(exception)
-        }
-    } else {
-        return response.status(401).json({ error: `Unauthorized` })
-    }
-})
+router.delete('/:id', userExtractor, async (request, response) => {
+  const user = request.user;
+  const blog = await Blog.findById(request.params.id);
 
-module.exports = blogRouter
+  if (!blog) {
+    return response.status(204).end();
+  }
+
+  if (user.id.toString() !== blog.user.toString()) {
+    return response.status(403).json({ error: 'user not authorized' });
+  }
+
+  await Promise.all([blog.deleteOne(), user.save()]);
+
+  response.status(204).end();
+});
+
+router.put('/:id', async (request, response) => {
+  const { title, author, url, likes } = request.body;
+  const updatedBlog = await Blog.findByIdAndUpdate(
+    request.params.id,
+    { title, author, url, likes },
+    { new: true }
+  );
+
+  response.json(updatedBlog);
+});
+
+module.exports = router;
