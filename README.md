@@ -12,4 +12,7 @@
 
 ### [Part 5 - Testing React apps](./part5)
 
+### [Part 6 - Advanced state management](./part6)
+
+
 
