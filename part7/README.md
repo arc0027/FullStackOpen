@@ -1,11 +1,11 @@
 # Part 7 || React router, custom hooks, styling app with CSS and webpack
 
-### [Routed Anecdotes](./part7/routed-anecdotes)
+### [Routed Anecdotes](./routed-anecdotes)
 
-### [Country Hook](./part7/country-hook)
+### [Country Hook](./country-hook)
 
-### [Ultimate Hooks](./part7/ultimate-hooks)
+### [Ultimate Hooks](./ultimate-hooks)
 
-### [Bloglist Query](./part7/bloglist-query)
+### [Bloglist Query](./bloglist-query)
 
-### [Bloglist Redux](./part7/bloglist-redux)
+### [Bloglist Redux](./bloglist-redux)
