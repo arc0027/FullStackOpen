@@ -16,7 +16,7 @@
 
 ### [Part 7 - React router, custom hooks, styling app with CSS and webpack](./part7)
 
-### Certificado
+### Certificado FullStackOpen
 https://studies.cs.helsinki.fi/stats/api/certificate/fullstackopen/en/09b84ea47d301de033474e3f4e32fe92
 
 
